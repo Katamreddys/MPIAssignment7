@@ -53,89 +53,77 @@ int main (int argc, char* argv[]) {
   if (argc < 3) {
     std::cout<<"usage: "<<argv[0]<<" <n> <iteration>"<<std::endl;
   }
-
-
   //initialize data
   
    MPI_Init(&argc,&argv);
 
    long n = atol(argv[1]);
 
-   int iter = atoi(argv[2]);
+   int iteration = atoi(argv[2]);
    bool check = true;
 
-   int worldrank,np;
+   int rankmpi,sizenpi;
    
-   MPI_Comm_rank(MPI_COMM_WORLD,&worldrank);
-   MPI_Comm_size(MPI_COMM_WORLD,&np);
+   MPI_Comm_rank(MPI_COMM_WORLD,&rankmpi);
+   MPI_Comm_size(MPI_COMM_WORLD,&sizenpi);
 
-   int p = sqrt(np);
-   long each_div = n/p; 
+   int p = sqrt(sizenpi);
+   long divInd = n/p; 
    
-   int row_div = worldrank/p,col_div = worldrank%p;
+   int divRow = rankmpi/p,divCol = rankmpi%p;
    
-   MPI_Comm row_comm;
-   int rowrank;
-   MPI_Comm_split(MPI_COMM_WORLD, row_div, worldrank, &row_comm);
-   MPI_Comm_rank(row_comm,&rowrank);
+   MPI_Comm commRow;
+   int rankRow;
+   MPI_Comm_split(MPI_COMM_WORLD, divRow, rankmpi, &commRow);
+   MPI_Comm_rank(commRow,&rankRow);
 
-   MPI_Comm col_comm;
-   int colrank;
-   MPI_Comm_split(MPI_COMM_WORLD, col_div, worldrank, &col_comm);
-   MPI_Comm_rank(col_comm,&colrank);
+   MPI_Comm commCol;
+   int rankCol;
+   MPI_Comm_split(MPI_COMM_WORLD, divCol, rankmpi, &commCol);
+   MPI_Comm_rank(commCol,&rankCol);
 
-   float* A = new float[each_div*each_div];
-   long rowstart = (row_div*each_div),colstart = (col_div*each_div);
-   long rowend = rowstart+each_div,colend = colstart+each_div;
+   float* mainArray = new float[divInd*divInd];
+   long beginRow = (divRow*divInd),startCol = (divCol*divInd);
+   long endRow = beginRow+divInd,colend = startCol+divInd;
 
-  for (long row = rowstart,rset=0; row<rowend; row++,rset++) {
-    for (long col= colstart,cset=0; col<colend; col++,cset++) {
-      A[(rset*each_div)+cset] = genA(row, col);
+  for (long row = beginRow,rset=0; row<endRow; row++,rset++) {
+    for (long col= startCol,cset=0; col<colend; col++,cset++) {
+      mainArray[(rset*divInd)+cset] = genA(row, col);
     }
   }
 
-  float* x = new float[each_div];
+  float* x = new float[divInd];
 
-  for (long i=0; i<each_div; i++)
+  for (long i=0; i<divInd; i++)
     {
      x[i] = genx0(i);
     }
-  float* y = new float[each_div];
-  for (long i=0; i<each_div; i++)
+  float* y = new float[divInd];
+  for (long i=0; i<divInd; i++)
     y[i] = 0.0;
  
-   double start = MPI_Wtime(); 
-   // cout<<"y---------------"<<worldrank<<endl;
-   for (int it = 0; it<iter; it++) 
+   double beginTime = MPI_Wtime(); 
+   for (int it = 0; it<iteration; it++) 
    {
-      matmul(A,x,y,each_div);
-      /* cout<<"iteration"<<it<<endl;
-       for (long row = 0; row<each_div; row=row+1) {
-         float sum = 0.0;
-    
-          for (long col = 0; col<each_div ; col=col+1) {
-          sum = sum + (x[col] * A[(row*each_div)+col]);
-          }
-             y[row] = sum;
-       }*/
-      MPI_Reduce(y,x,each_div,MPI_FLOAT,MPI_SUM,row_div,row_comm);
-      MPI_Bcast(x,each_div,MPI_FLOAT,col_div, col_comm);
+      matmul(mainArray,x,y,divInd);
+      MPI_Reduce(y,x,divInd,MPI_FLOAT,MPI_SUM,divRow,commRow);
+      MPI_Bcast(x,divInd,MPI_FLOAT,divCol, commCol);
   if (check){
-    for (long i = colstart,p=0; i<colend; ++i,++p){
+    for (long i = startCol,p=0; i<colend; ++i,++p){
         checkx (it+1, i, x[p]);
              }
           }
   }
   
-  if(worldrank == 0){
-        double end = MPI_Wtime(); 
-        cerr<<end-start<<endl;
+  if(rankmpi == 0){
+        double endTime = MPI_Wtime(); 
+        cerr<<endTime-beginTime<<endl;
    }
  
-  MPI_Comm_free(&row_comm);
-  MPI_Comm_free(&col_comm);
+  MPI_Comm_free(&commRow);
+  MPI_Comm_free(&commCol);
 
-  delete[] A;
+  delete[] mainArray;
   delete[] x;
   delete[] y;
 

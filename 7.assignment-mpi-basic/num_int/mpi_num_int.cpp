@@ -28,54 +28,54 @@ int main (int argc, char* argv[]) {
   }
   
   MPI_Init(&argc,&argv);
-  int fid = atoi(argv[1]);
+  int function_id = atoi(argv[1]);
   float a = atof(argv[2]);
   float b = atof(argv[3]);
   int n = atoi(argv[4]);
   int intensity = atoi(argv[5]);
-  int rank,p;
-  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  MPI_Comm_size(MPI_COMM_WORLD,&p);
-  float (*func)(float,int);
-  float limit = (b-a)/n;
-  int itstart,itend,partition;
-  double start = MPI_Wtime(); 
-  partition = n/p;
-  itstart = rank*partition; itend = (rank+1)*partition;
-  if(rank == p-1)
-	  itend = n;
-  switch(fid)
+  int rank_mpi,size_mpi;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank_mpi);
+  MPI_Comm_size(MPI_COMM_WORLD,&size_mpi);
+  float (*function)(float,int);
+  float preCalMul = (b-a)/n;
+  int startLoop,tendLoop,pt;
+  double startTime = MPI_Wtime(); 
+  pt = n/size_mpi;
+  startLoop = rank_mpi*pt; tendLoop = (rank_mpi+1)*pt;
+  if(rank_mpi == size_mpi-1)
+	  tendLoop = n;
+  switch(function_id)
   {
-     case 1 : func = &f1;
+     case 1 : function = &f1;
                 
                 break;
 
-     case 2 : func = &f2;
+     case 2 : function = &f2;
                 break;
 
-     case 3 : func = &f3;
+     case 3 : function = &f3;
                 break;
 
-     case 4 : func = &f4;
+     case 4 : function = &f4;
                 break;
 
-     default :  cerr<<"Functionid does not exists, Enter 1, 2, 3 or 4" <<endl; 
+     default :  cerr<<"Please Enter 1, 2, 3 or 4" <<endl; 
                 return -1;                
 
    };
-   float par_integralval= 0.0,integralval = 0.0;
-   for(int i = itstart ; i<itend ;i++)
+   float partialInt= 0.0,finalInt = 0.0;
+   for(int i = startLoop ; i<tendLoop ;i++)
         {
-           float x = a + ( (i + 0.5) *limit );
-	       par_integralval += (*func)(x,intensity); 
+           float x = a + ( (i + 0.5) *preCalMul );
+	       partialInt += (*function)(x,intensity); 
         }
-   MPI_Reduce(&par_integralval,&integralval,1,MPI_FLOAT,MPI_SUM,0,MPI_COMM_WORLD);
-   if(rank == 0)
+   MPI_Reduce(&partialInt,&finalInt,1,MPI_FLOAT,MPI_SUM,0,MPI_COMM_WORLD);
+   if(rank_mpi == 0)
    {
-	   integralval = integralval * limit;
-	   cout<<integralval<<endl;
-           double end = MPI_Wtime(); 
-           cerr<<end-start<<endl;
+	   finalInt = finalInt * preCalMul;
+	   cout<<finalInt<<endl;
+           double endTime = MPI_Wtime(); 
+           cerr<<endTime-startTime<<endl;
    }
    
   
