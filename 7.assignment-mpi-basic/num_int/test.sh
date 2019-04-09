@@ -31,7 +31,7 @@ fi
 while read test; 
 do
     t=($test)
-    ANSW=$(mpirun ${MPIRUN_PARAMS} -np ${t[1]} ./mpi_num_int 1 0 10 ${t[0]} ${t[2]} 2> .time < /dev/null)
+    ANSW=$(mpirun --mca btl_base_warn_component_unused 0 ${MPIRUN_PARAMS} -np ${t[1]} ./mpi_num_int 1 0 10 ${t[0]} ${t[2]} 2> .time < /dev/null)
 
     process_time_file .time
 
@@ -40,7 +40,7 @@ do
     then # success
         test_time $(cat .time)
     else # fail
-        echo FAIL: "mpirun ${MPIRUN_PARAMS} -np ${t[1]} ./mpi_num_int 1 0 10 ${t[0]} ${t[2]}" should give roughly "${t[3]}" not ${ANSW}
+        echo FAIL: "mpirun --mca btl_base_warn_component_unused 0 ${MPIRUN_PARAMS} -np ${t[1]} ./mpi_num_int 1 0 10 ${t[0]} ${t[2]}" should give roughly "${t[3]}" not ${ANSW}
         exit 1
     fi
     

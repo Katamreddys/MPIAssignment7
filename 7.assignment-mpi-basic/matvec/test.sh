@@ -34,7 +34,7 @@ do
       for ITER in ${ITERS} ;
       do
 
-         ANSW=$(mpirun ${MPIRUN_PARAMS} -np ${NP} ./mpi_matmul ${N} ${ITER} 2> .time < /dev/null)
+         ANSW=$(mpirun --mca btl_base_warn_component_unused 0 ${MPIRUN_PARAMS} -np ${NP} ./mpi_matmul ${N} ${ITER} 2> .time < /dev/null)
 
 	 process_time_file .time
 	 
@@ -45,7 +45,7 @@ do
          then
             test_time $(cat .time) 
          else
-            echo FAILED: "mpirun ${MPIRUN_PARAMS} -np ${NP} ./mpi_matmul ${N} ${ITER}"
+            echo FAILED: "mpirun --mca btl_base_warn_component_unused 0 ${MPIRUN_PARAMS} -np ${NP} ./mpi_matmul ${N} ${ITER}"
             exit 1
          fi
       
